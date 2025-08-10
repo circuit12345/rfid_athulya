@@ -1,0 +1,101 @@
+#include "http_client.h"
+
+
+esp_err_t http_client_send_json(const char *json)
+{
+    if (!wifi_is_connected()) {
+        ESP_LOGW(TAG, "WiFi not connected, refusing to send");
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    esp_http_client_config_t config = {
+        .url = WEB_SERVER_URL,
+        .method = HTTP_METHOD_POST,
+        .timeout_ms = 10000
+    };
+
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (!client) {
+        ESP_LOGE(TAG, "Failed to init http client");
+        return ESP_FAIL;
+    }
+
+    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_err_t err = esp_http_client_set_post_field(client, json, strlen(json));
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "set_post_field failed (%s)", esp_err_to_name(err));
+        esp_http_client_cleanup(client);
+        return err;
+    }
+
+    err = esp_http_client_perform(client);
+    if (err == ESP_OK) {
+        int status = esp_http_client_get_status_code(client);
+        ESP_LOGI(TAG, "HTTP POST Status = %d", status);
+        if (status >= 200 && status < 300) {
+            esp_http_client_cleanup(client);
+            return ESP_OK;
+        } else {
+            ESP_LOGW(TAG, "Server returned %d", status);
+            esp_http_client_cleanup(client);
+            return ESP_FAIL;
+        }
+    } else {
+        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
+        esp_http_client_cleanup(client);
+        return err;
+    }
+}
+
+void http_send_task(void *pvParameters)
+{
+    rfid_message_t msg;
+    for (;;)
+    {
+        if (xQueueReceive(rfid_queue, &msg, portMAX_DELAY) == pdTRUE)
+        {
+            ESP_LOGI(TAG, "Sending UID: %s", msg.uid);
+
+            /* Build JSON */
+            cJSON *root = cJSON_CreateObject();
+            cJSON_AddStringToObject(root, "uid", msg.uid);
+            cJSON_AddStringToObject(root, "timestamp", msg.timestamp);
+            cJSON_AddStringToObject(root, "placeType", g_placeType);
+            cJSON_AddStringToObject(root, "room", g_roomNumber);
+            cJSON_AddStringToObject(root, "location", g_location);
+            cJSON_AddStringToObject(root, "tower", g_tower);
+            cJSON_AddStringToObject(root, "floorNumber", g_floorNumber);
+
+            char *json_str = cJSON_PrintUnformatted(root);
+            cJSON_Delete(root);
+
+            if (!json_str)
+            {
+                ESP_LOGE(TAG, "Failed to create JSON");
+                continue;
+            }
+
+            /* If connected, try send, otherwise save to SPIFFS */
+            if (wifi_is_connected())
+            {
+                esp_err_t res = http_client_send_json(json_str);
+                if (res != ESP_OK)
+                {
+                    ESP_LOGW(TAG, "Send failed, saving to SPIFFS");
+                    spiffs_logger_save(json_str);
+                }
+                else
+                {
+                    ESP_LOGI(TAG, "Sent successfully");
+                }
+            }
+            else
+            {
+                ESP_LOGI(TAG, "WiFi not connected, saving to SPIFFS");
+                spiffs_logger_save(json_str);
+            }
+
+            free(json_str);
+        }
+    }
+}
