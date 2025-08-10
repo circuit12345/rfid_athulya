@@ -65,6 +65,11 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+    load_ap_credentials_from_nvs();
+    ESP_LOGI("MAIN", "Starting AP with SSID=%s", g_ap_ssid);
+    load_config_from_nvs();
+
+
 
     wifi_event_group = xEventGroupCreate();
 
@@ -89,8 +94,8 @@ void app_main(void)
 
     init_gpio();
 
-    bool ap_mode = (gpio_get_level(GPIO_NUM_14) == 0); // your logic to pick mode
-    switch_wifi_mode(ap_mode);
+    //bool ap_mode = (gpio_get_level(GPIO_NUM_14) == 0); // your logic to pick mode
+    switch_wifi_mode(false);
     
     rfid_queue = xQueueCreate(RFID_QUEUE_LEN, sizeof(rfid_message_t));
     if (!rfid_queue)

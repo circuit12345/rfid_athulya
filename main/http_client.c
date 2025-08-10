@@ -10,9 +10,19 @@ esp_err_t http_client_send_json(const char *json)
 
     esp_http_client_config_t config = {
         .url = WEB_SERVER_URL,
-        .method = HTTP_METHOD_POST,
-        .timeout_ms = 10000
+        .cert_pem = NULL, // No certificate
+        .skip_cert_common_name_check = true, // Skip CN check
+        .transport_type = HTTP_TRANSPORT_OVER_SSL,
+        .use_global_ca_store = false,
+        .crt_bundle_attach = NULL,
+        .auth_type = HTTP_AUTH_TYPE_NONE
     };
+    
+    
+    // Disable verification (NOT recommended for production)
+    config.skip_cert_common_name_check = true;
+    
+    
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {

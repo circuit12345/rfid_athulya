@@ -211,3 +211,37 @@ void load_config_from_nvs(void)
     ESP_LOGI("NVS", "Tower: %s", g_tower);
     ESP_LOGI("NVS", "FloorNumber: %s", g_floorNumber);
 }
+
+// void save_ap_credentials_to_nvs(const char *ssid, const char *pass) {
+//     nvs_handle_t handle;
+//     esp_err_t err = nvs_open("wifi_config", NVS_READWRITE, &handle);
+//     if (err == ESP_OK) {
+//         nvs_set_str(handle, "ap_ssid", ssid);
+//         nvs_set_str(handle, "ap_pass", pass);
+//         nvs_commit(handle);
+//         nvs_close(handle);
+//     }
+// }
+
+// #include <string.h>
+// #include "nvs_flash.h"
+// #include "nvs.h"
+// #include "global.h"
+
+// void load_ap_credentials_from_nvs(char *ssid, size_t ssid_size, char *pass, size_t pass_size) {
+//     nvs_handle_t handle;
+//     esp_err_t err = nvs_open("wifi_config", NVS_READONLY, &handle);
+//     if (err == ESP_OK) {
+//         if (nvs_get_str(handle, "ap_ssid", ssid, &ssid_size) != ESP_OK) {
+//             strncpy(ssid, g_ap_ssid, ssid_size);
+//         }
+//         if (nvs_get_str(handle, "ap_pass", pass, &pass_size) != ESP_OK) {
+//             strncpy(pass, g_ap_pass, pass_size);
+//         }
+//         nvs_close(handle);
+//     } else {
+//         strncpy(ssid, g_ap_ssid, ssid_size);
+//         strncpy(pass, g_ap_pass, pass_size);
+//     }
+// }
+

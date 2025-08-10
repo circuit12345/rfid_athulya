@@ -1,5 +1,8 @@
 #include "global.h"
 QueueHandle_t rfid_queue = NULL;
+char g_ap_ssid[MAX_PARAM_LEN] = "NODE";
+char g_ap_pass[MAX_PARAM_LEN] =  "12345678";
+
 char g_ssid[MAX_PARAM_LEN] = "Sriramsrk";
 char g_password[MAX_PARAM_LEN] = "srk12345";
 char g_placeType[MAX_PARAM_LEN] = "office";

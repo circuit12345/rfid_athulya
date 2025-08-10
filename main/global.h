@@ -56,8 +56,8 @@
 #define STA_SSID "your_ssid"
 #define STA_PASS "your_pass"
 
-#define AP_SSID "UVS_AP"
-#define AP_PASS "uvs12345"
+// #define AP_SSID_DEFAULT "UVS_AP"
+// #define AP_PASS_DEFAULT "uvs12345"
 #define UID_MAX_LEN 32
 #define MAX_PARAM_LEN 64
 //static rc522_handle_t scanner;
@@ -70,6 +70,8 @@
 #define I2C_MASTER_RX_BUF_DISABLE 0
 #define DS3231_ADDR          0x68   /*!< I2C address of the DS3231 RTC module */
 
+extern char g_ap_ssid[MAX_PARAM_LEN];
+extern char g_ap_pass[MAX_PARAM_LEN];
 extern  char g_ssid[MAX_PARAM_LEN];
 extern  char g_password[MAX_PARAM_LEN];
 extern  char g_placeType[MAX_PARAM_LEN];

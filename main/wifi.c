@@ -192,3 +192,42 @@ bool wifi_is_connected(void)
     return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) != 0;
 }
 
+
+void save_ap_credentials_to_nvs(void) {
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("wifi_config", NVS_READWRITE, &handle);
+    if (err == ESP_OK) {
+        nvs_set_str(handle, "ap_ssid", g_ap_ssid);
+        nvs_set_str(handle, "ap_pass", g_ap_pass);
+        nvs_commit(handle);
+        nvs_close(handle);
+        ESP_LOGI("NVS", "AP credentials saved: SSID=%s, PASS=%s", g_ap_ssid, g_ap_pass);
+    } else {
+        ESP_LOGE("NVS", "Failed to open NVS for writing: %s", esp_err_to_name(err));
+    }
+}
+
+void load_ap_credentials_from_nvs(void) {
+    nvs_handle_t handle;
+    size_t ssid_size = sizeof(g_ap_ssid);
+    size_t pass_size = sizeof(g_ap_pass);
+
+    esp_err_t err = nvs_open("wifi_config", NVS_READONLY, &handle);
+    if (err == ESP_OK) {
+        if (nvs_get_str(handle, "ap_ssid", g_ap_ssid, &ssid_size) != ESP_OK) {
+            // Keep default from global.c
+        }
+        ssid_size = sizeof(g_ap_ssid); // reset before reuse
+
+        if (nvs_get_str(handle, "ap_pass", g_ap_pass, &pass_size) != ESP_OK) {
+            // Keep default from global.c
+        }
+        nvs_close(handle);
+
+        ESP_LOGI("NVS", "AP credentials loaded: SSID=%s, PASS=%s", g_ap_ssid, g_ap_pass);
+    } else {
+        // Defaults from global.c will be used
+        ESP_LOGE("NVS", "Failed to open NVS: %s, using defaults", esp_err_to_name(err));
+    }
+}
+
