@@ -69,7 +69,8 @@ void http_send_task(void *pvParameters)
             /* Build JSON */
             cJSON *root = cJSON_CreateObject();
             cJSON_AddStringToObject(root, "uid", msg.uid);
-            cJSON_AddStringToObject(root, "timestamp", msg.timestamp);
+            cJSON_AddStringToObject(root, "timestamp", rtc_get_timestamp());
+
             cJSON_AddStringToObject(root, "placeType", g_placeType);
             cJSON_AddStringToObject(root, "room", g_roomNumber);
             cJSON_AddStringToObject(root, "location", g_location);

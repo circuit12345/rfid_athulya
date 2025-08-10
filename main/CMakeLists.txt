@@ -5,7 +5,7 @@
                         
 #                         )
 idf_component_register(
-    SRCS "main.c" "global.c" "gpio.c" "nvs_handle.c" "ota_handle.c" "rfid.c" "webserver.c" "wifi.c" "http_client.c" "spiffs_logger.c" 
+    SRCS "main.c" "global.c" "gpio.c" "nvs_handle.c" "ota_handle.c" "rfid.c" "webserver.c" "wifi.c" "http_client.c" "spiffs_logger.c" "rtc.c" "ota.c" 
     INCLUDE_DIRS "."
     REQUIRES
         esp_system

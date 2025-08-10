@@ -93,6 +93,9 @@ void app_main(void)
     esp_netif_create_default_wifi_ap();
 
     init_gpio();
+    rtc_hw084_init();
+    //rtc_set_time_from_ntp();
+
 
     //bool ap_mode = (gpio_get_level(GPIO_NUM_14) == 0); // your logic to pick mode
     switch_wifi_mode(false);
@@ -109,6 +112,8 @@ void app_main(void)
     {
         ESP_LOGW(TAG, "SPIFFS init failed - offline logging disabled");
     }
+    sntp_init_once();
+    rtc_set_time_from_ntp();
 
     /* Initialize RFID module after queue exists */
     rfid_init_module();
@@ -117,6 +122,8 @@ void app_main(void)
     xTaskCreate(http_send_task, "http_send_task", 8192, NULL, 5, NULL);
     xTaskCreate(spiffs_sync_task, "spiffs_sync_task", 6144, NULL, 5, NULL);
     xTaskCreate(wifi_mode_switch_task, "wifi_switch_task", 4096, NULL, 5, NULL);
+    xTaskCreate(time_sync_task, "time_sync_task", 4096, NULL, 5, NULL);
+
    // xTaskCreate(gpio_input_test_task, "gpio_input_test_task", 2048, NULL, 5, NULL);
 
     ESP_LOGI(TAG, "Returned from app_main()");
