@@ -22,6 +22,7 @@ void init_gpio()
     ret = gpio_isr_handler_add(APMODE, gpio_isr_handler, NULL);
     if (ret != ESP_OK) ESP_LOGE(TAG, "ISR handler add failed: %d", ret);
 
+
     
 }
 void wifi_mode_switch_task(void *arg)

@@ -45,14 +45,15 @@ void switch_wifi_mode(bool apmode)
     {
         wifi_config_t ap_config = {
             .ap = {
-                .ssid = "MyESP32_AP",
+                .ssid = {0},
                 .ssid_len = 0,
                 .max_connection = 4,
-                .password = "12345678",
+                .password = {0},
                 .authmode = WIFI_AUTH_WPA_WPA2_PSK,
             },
         };
-
+        strncpy((char *)ap_config.ap.ssid, g_ap_ssid, sizeof(ap_config.ap.ssid) - 1);
+        strncpy((char *)ap_config.ap.password, g_ap_pass, sizeof(ap_config.ap.password) - 1);
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());

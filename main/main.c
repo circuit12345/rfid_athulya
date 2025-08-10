@@ -93,6 +93,9 @@ void app_main(void)
     esp_netif_create_default_wifi_ap();
 
     init_gpio();
+    led_init();
+    led_set_color(LED_WHITE);
+
     rtc_hw084_init();
     //rtc_set_time_from_ntp();
 
@@ -128,4 +131,6 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Returned from app_main()");
     // rest of your initialization...
+    led_set_color(LED_OFF);
+
 }

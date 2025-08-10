@@ -46,6 +46,9 @@
 #include "esp_netif.h"
 #include "rtc.h"
 #include "ota.h"
+#include "led.h"
+//#include "esp_sntp.h"
+
 // WEBSERVER CONFIGURATIONS
 #define RESPONSE_BUFFER_SIZE 14000  // Size of the HTTP response buffer used by the web server (in bytes)
 // #define WIFI_DEFAULT_SSID "RFID" // Default Wi-Fi SSID (Access Point name) for the simulation device
