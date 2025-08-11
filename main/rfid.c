@@ -6,7 +6,7 @@ static rc522_handle_t scanner = NULL;
 /* rc522 event handler (similar to what you posted) */
 void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    led_set_color(LED_GREEN);
+    led_override_glow_3s(LED_GREEN);
 
     rc522_event_data_t *data = (rc522_event_data_t *)event_data;
 
@@ -56,7 +56,6 @@ void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *eve
                 spiffs_logger_save(json);
                 free(json);
             }
-            led_set_color(LED_OFF);
 
         }
     }

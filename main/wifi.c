@@ -58,6 +58,8 @@ void switch_wifi_mode(bool apmode)
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());
         start_webserver();
+        led_override_glow_3s(LED_BLUE);
+
     }
     else
     {
@@ -168,11 +170,17 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
         {
         case WIFI_EVENT_STA_START:
             esp_wifi_connect();
+            led_override_glow_3s(LED_WHITE);
+            //led_set_color_indefinite(LED_WHITE);
+
             break;
         case WIFI_EVENT_STA_DISCONNECTED:
             xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
             esp_wifi_connect();
             ESP_LOGI(TAG, "Disconnected. Reconnecting...");
+            //led_set_color_indefinite(LED_RED);
+            led_override_glow_3s(LED_RED);
+
             break;
         case WIFI_EVENT_AP_START:
             // You can set event bits for AP start if needed

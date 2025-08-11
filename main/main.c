@@ -62,6 +62,8 @@ void gpio_input_test_task(void *arg)
 // }
 void app_main(void)
 {
+    led_init();
+    led_override_glow_3s(LED_WHITE);
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
@@ -93,8 +95,7 @@ void app_main(void)
     esp_netif_create_default_wifi_ap();
 
     init_gpio();
-    led_init();
-    led_set_color(LED_WHITE);
+
 
     rtc_hw084_init();
     //rtc_set_time_from_ntp();
@@ -131,6 +132,5 @@ void app_main(void)
 
     ESP_LOGI(TAG, "Returned from app_main()");
     // rest of your initialization...
-    led_set_color(LED_OFF);
 
 }
