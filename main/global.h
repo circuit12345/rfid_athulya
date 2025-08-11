@@ -46,6 +46,9 @@
 #include "esp_netif.h"
 #include "rtc.h"
 #include "ota.h"
+#include "led.h"
+//#include "esp_sntp.h"
+//#define DEBOUNCE_TIME_US 1000000 
 // WEBSERVER CONFIGURATIONS
 #define RESPONSE_BUFFER_SIZE 14000  // Size of the HTTP response buffer used by the web server (in bytes)
 // #define WIFI_DEFAULT_SSID "RFID" // Default Wi-Fi SSID (Access Point name) for the simulation device
@@ -57,7 +60,7 @@
 #define WEB_SERVER_URL "https://tamsen.in/rfid/log_entry.php"
 #define STA_SSID "your_ssid"
 #define STA_PASS "your_pass"
-#define OTA_CHECK_INTERVAL_MS (3*1000) 
+#define OTA_CHECK_INTERVAL_MS (30*1000) 
 // #define AP_SSID_DEFAULT "UVS_AP"
 // #define AP_PASS_DEFAULT "uvs12345"
 #define UID_MAX_LEN 32

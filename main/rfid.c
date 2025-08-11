@@ -6,6 +6,13 @@ static rc522_handle_t scanner = NULL;
 /* rc522 event handler (similar to what you posted) */
 void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *event_data)
 {
+    led_override_glow_3s(LED_GREEN);
+    if (is_ap_mode) {  // only switch if in AP mode
+        is_ap_mode = false;
+        ESP_LOGI(TAG, "Switching from AP to STA mode");
+        switch_wifi_mode(false);
+    }
+
     rc522_event_data_t *data = (rc522_event_data_t *)event_data;
 
     if (event_id == RC522_EVENT_TAG_SCANNED) {
@@ -34,7 +41,6 @@ void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *eve
         rfid_message_t msg;
         snprintf(msg.uid, UID_MAX_LEN, "%s", uid_str);
         snprintf(msg.timestamp, sizeof(msg.timestamp), "%lld", esp_timer_get_time() / 1000);
-
         /* Push to queue (blocking short time to avoid dropping if possible) */
         if (rfid_queue && xQueueSend(rfid_queue, &msg, pdMS_TO_TICKS(10)) == pdTRUE) {
             ESP_LOGI(TAG, "Queued UID");
@@ -55,6 +61,7 @@ void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *eve
                 spiffs_logger_save(json);
                 free(json);
             }
+
         }
     }
 }

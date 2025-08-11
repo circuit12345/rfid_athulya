@@ -92,6 +92,7 @@ void spiffs_sync_task(void *pvParameters)
         xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
         ESP_LOGI(TAG, "WiFi connected; attempting to sync stored logs");
+        led_set_color_indefinite(LED_MAGENTA);
         spiffs_logger_send_all();
 
         TickType_t now = xTaskGetTickCount();

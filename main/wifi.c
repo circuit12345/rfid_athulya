@@ -1,14 +1,28 @@
 #include "wifi.h"
 static esp_netif_t *netif_ap = NULL;
 //static esp_netif_t *netif_sta = NULL;
+// void IRAM_ATTR gpio_isr_handler(void *arg)
+// {
+//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+//     // Toggle mode flag atomically (optional here, can do in task)
+//     is_ap_mode = !is_ap_mode;
+
+//     // Notify the task
+//     xSemaphoreGiveFromISR(wifi_switch_semaphore, &xHigherPriorityTaskWoken);
+//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+// }
+static uint32_t last_interrupt_time = 0;
+
 void IRAM_ATTR gpio_isr_handler(void *arg)
 {
+    uint32_t now = xTaskGetTickCountFromISR();
+
+    // 200 ms debounce
+    if ((now - last_interrupt_time) < pdMS_TO_TICKS(500)) return;
+    last_interrupt_time = now;
+
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    // Toggle mode flag atomically (optional here, can do in task)
-    is_ap_mode = !is_ap_mode;
-
-    // Notify the task
     xSemaphoreGiveFromISR(wifi_switch_semaphore, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
@@ -45,18 +59,21 @@ void switch_wifi_mode(bool apmode)
     {
         wifi_config_t ap_config = {
             .ap = {
-                .ssid = "MyESP32_AP",
+                .ssid = {0},
                 .ssid_len = 0,
                 .max_connection = 4,
-                .password = "12345678",
+                .password = {0},
                 .authmode = WIFI_AUTH_WPA_WPA2_PSK,
             },
         };
-
+        strncpy((char *)ap_config.ap.ssid, g_ap_ssid, sizeof(ap_config.ap.ssid) - 1);
+        strncpy((char *)ap_config.ap.password, g_ap_pass, sizeof(ap_config.ap.password) - 1);
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());
         start_webserver();
+        led_override_blink(LED_BLUE);
+
     }
     else
     {
@@ -167,11 +184,17 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
         {
         case WIFI_EVENT_STA_START:
             esp_wifi_connect();
+            //led_override_glow_3s(LED_WHITE);
+            //led_set_color_indefinite(LED_WHITE);
+
             break;
         case WIFI_EVENT_STA_DISCONNECTED:
             xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED_BIT);
             esp_wifi_connect();
             ESP_LOGI(TAG, "Disconnected. Reconnecting...");
+            //led_set_color_indefinite(LED_RED);
+            led_override_glow_3s(LED_RED);
+
             break;
         case WIFI_EVENT_AP_START:
             // You can set event bits for AP start if needed
@@ -189,6 +212,7 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
 }
 bool wifi_is_connected(void)
 {
+    //led_set_color_indefinite(LED_GREEN);
     return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) != 0;
 }
 
