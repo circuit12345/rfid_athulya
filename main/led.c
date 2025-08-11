@@ -133,7 +133,7 @@ void led_init(void)
     gpio_config(&io_conf);
 
     // Create timers for glow (3s timeout) and blinking (periodic)
-    glow_timer = xTimerCreate("GlowTimer", pdMS_TO_TICKS(3000), pdFALSE, NULL, glow_timer_callback);
+    glow_timer = xTimerCreate("GlowTimer", pdMS_TO_TICKS(1000), pdFALSE, NULL, glow_timer_callback);
     if (glow_timer == NULL)
     {
         ESP_LOGE(TAG, "Failed to create glow_timer");

@@ -3,7 +3,7 @@
 void init_gpio()
 {
     gpio_config_t io_conf = {
-        .intr_type = GPIO_INTR_POSEDGE,
+        .intr_type = GPIO_INTR_NEGEDGE,
         .mode = GPIO_MODE_INPUT,
         .pin_bit_mask = 1ULL << APMODE,
         .pull_up_en = GPIO_PULLUP_ENABLE,

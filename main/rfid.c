@@ -7,6 +7,11 @@ static rc522_handle_t scanner = NULL;
 void rc522_handler(void *arg, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     led_override_glow_3s(LED_GREEN);
+    if (is_ap_mode) {  // only switch if in AP mode
+        is_ap_mode = false;
+        ESP_LOGI(TAG, "Switching from AP to STA mode");
+        switch_wifi_mode(false);
+    }
 
     rc522_event_data_t *data = (rc522_event_data_t *)event_data;
 

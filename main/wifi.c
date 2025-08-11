@@ -1,14 +1,28 @@
 #include "wifi.h"
 static esp_netif_t *netif_ap = NULL;
 //static esp_netif_t *netif_sta = NULL;
+// void IRAM_ATTR gpio_isr_handler(void *arg)
+// {
+//     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+
+//     // Toggle mode flag atomically (optional here, can do in task)
+//     is_ap_mode = !is_ap_mode;
+
+//     // Notify the task
+//     xSemaphoreGiveFromISR(wifi_switch_semaphore, &xHigherPriorityTaskWoken);
+//     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+// }
+static uint32_t last_interrupt_time = 0;
+
 void IRAM_ATTR gpio_isr_handler(void *arg)
 {
+    uint32_t now = xTaskGetTickCountFromISR();
+
+    // 200 ms debounce
+    if ((now - last_interrupt_time) < pdMS_TO_TICKS(500)) return;
+    last_interrupt_time = now;
+
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-
-    // Toggle mode flag atomically (optional here, can do in task)
-    is_ap_mode = !is_ap_mode;
-
-    // Notify the task
     xSemaphoreGiveFromISR(wifi_switch_semaphore, &xHigherPriorityTaskWoken);
     portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
@@ -58,7 +72,7 @@ void switch_wifi_mode(bool apmode)
         ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &ap_config));
         ESP_ERROR_CHECK(esp_wifi_start());
         start_webserver();
-        led_override_glow_3s(LED_BLUE);
+        led_override_blink(LED_BLUE);
 
     }
     else
@@ -170,7 +184,7 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
         {
         case WIFI_EVENT_STA_START:
             esp_wifi_connect();
-            led_override_glow_3s(LED_WHITE);
+            //led_override_glow_3s(LED_WHITE);
             //led_set_color_indefinite(LED_WHITE);
 
             break;
@@ -198,6 +212,7 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
 }
 bool wifi_is_connected(void)
 {
+    //led_set_color_indefinite(LED_GREEN);
     return (xEventGroupGetBits(wifi_event_group) & WIFI_CONNECTED_BIT) != 0;
 }
 
