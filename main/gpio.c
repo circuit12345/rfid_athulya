@@ -17,21 +17,21 @@ void init_gpio()
         wifi_switch_semaphore = xSemaphoreCreateBinary();
 
     esp_err_t ret = gpio_install_isr_service(0);
-    if (ret != ESP_OK) ESP_LOGE(TAG, "ISR service install failed: %d", ret);
+    if (ret != ESP_OK) ESP_LOGE(GPIO_TAG, "ISR service install failed: %d", ret);
 
     ret = gpio_isr_handler_add(APMODE, gpio_isr_handler, NULL);
-    if (ret != ESP_OK) ESP_LOGE(TAG, "ISR handler add failed: %d", ret);
+    if (ret != ESP_OK) ESP_LOGE(GPIO_TAG, "ISR handler add failed: %d", ret);
 
 
     
 }
 void wifi_mode_switch_task(void *arg)
 {
-    ESP_LOGI(TAG, "WiFi mode switch task started");
+    ESP_LOGI(WIFI_TAG, "WiFi mode switch task started");
     while (1) {
         if (xSemaphoreTake(wifi_switch_semaphore, portMAX_DELAY)) {
             is_ap_mode = !is_ap_mode;
-            ESP_LOGI(TAG, "Switching Wi-Fi mode to: %s", is_ap_mode ? "AP" : "STA");
+            ESP_LOGI(WIFI_TAG, "Switching Wi-Fi mode to: %s", is_ap_mode ? "AP" : "STA");
             switch_wifi_mode(is_ap_mode);
         }
     }

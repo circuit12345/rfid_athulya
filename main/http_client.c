@@ -4,7 +4,7 @@
 esp_err_t http_client_send_json(const char *json)
 {
     if (!wifi_is_connected()) {
-        ESP_LOGW(TAG, "WiFi not connected, refusing to send");
+        ESP_LOGW(HTTP_TAG, "WiFi not connected, refusing to send");
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -26,14 +26,14 @@ esp_err_t http_client_send_json(const char *json)
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (!client) {
-        ESP_LOGE(TAG, "Failed to init http client");
+        ESP_LOGE(HTTP_TAG, "Failed to init http client");
         return ESP_FAIL;
     }
 
     esp_http_client_set_header(client, "Content-Type", "application/json");
     esp_err_t err = esp_http_client_set_post_field(client, json, strlen(json));
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "set_post_field failed (%s)", esp_err_to_name(err));
+        ESP_LOGE(HTTP_TAG, "set_post_field failed (%s)", esp_err_to_name(err));
         esp_http_client_cleanup(client);
         return err;
     }
@@ -41,17 +41,17 @@ esp_err_t http_client_send_json(const char *json)
     err = esp_http_client_perform(client);
     if (err == ESP_OK) {
         int status = esp_http_client_get_status_code(client);
-        ESP_LOGI(TAG, "HTTP POST Status = %d", status);
+        ESP_LOGI(HTTP_TAG, "HTTP POST Status = %d", status);
         if (status >= 200 && status < 300) {
             esp_http_client_cleanup(client);
             return ESP_OK;
         } else {
-            ESP_LOGW(TAG, "Server returned %d", status);
+            ESP_LOGW(HTTP_TAG, "Server returned %d", status);
             esp_http_client_cleanup(client);
             return ESP_FAIL;
         }
     } else {
-        ESP_LOGE(TAG, "HTTP request failed: %s", esp_err_to_name(err));
+        ESP_LOGE(HTTP_TAG, "HTTP request failed: %s", esp_err_to_name(err));
         esp_http_client_cleanup(client);
         return err;
     }
@@ -64,7 +64,7 @@ void http_send_task(void *pvParameters)
     {
         if (xQueueReceive(rfid_queue, &msg, portMAX_DELAY) == pdTRUE)
         {
-            ESP_LOGI(TAG, "Sending UID: %s", msg.uid);
+            ESP_LOGI(HTTP_TAG, "Sending UID: %s", msg.uid);
 
             /* Build JSON */
             cJSON *root = cJSON_CreateObject();
@@ -82,7 +82,7 @@ void http_send_task(void *pvParameters)
 
             if (!json_str)
             {
-                ESP_LOGE(TAG, "Failed to create JSON");
+                ESP_LOGE(HTTP_TAG, "Failed to create JSON");
                 continue;
             }
 
@@ -92,17 +92,17 @@ void http_send_task(void *pvParameters)
                 esp_err_t res = http_client_send_json(json_str);
                 if (res != ESP_OK)
                 {
-                    ESP_LOGW(TAG, "Send failed, saving to SPIFFS");
+                    ESP_LOGW(HTTP_TAG, "Send failed, saving to SPIFFS");
                     spiffs_logger_save(json_str);
                 }
                 else
                 {
-                    ESP_LOGI(TAG, "Sent successfully");
+                    ESP_LOGI(HTTP_TAG, "Sent successfully");
                 }
             }
             else
             {
-                ESP_LOGI(TAG, "WiFi not connected, saving to SPIFFS");
+                ESP_LOGI(HTTP_TAG, "WiFi not connected, saving to SPIFFS");
                 spiffs_logger_save(json_str);
             }
 

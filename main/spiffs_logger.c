@@ -82,33 +82,85 @@ esp_err_t spiffs_logger_send_all(void)
 //     }
 // }
 
-void spiffs_sync_task(void *pvParameters)
+// void spiffs_sync_task(void *pvParameters)
+// {
+//     TickType_t last_ota_check = 0;
+
+//     for (;;)
+//     {
+//         // Wait until WiFi connected (blocks)
+//         xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+
+//         ESP_LOGI(TAG, "WiFi connected; attempting to sync stored logs");
+//         led_set_color_indefinite(LED_MAGENTA);
+//         spiffs_logger_send_all();
+
+//         TickType_t now = xTaskGetTickCount();
+//         if (now - last_ota_check > pdMS_TO_TICKS(OTA_CHECK_INTERVAL_MS)) {
+//             ESP_LOGI(TAG, "Time to check for OTA update");
+//             esp_err_t err = ota_check_and_update();
+//             if (err == ESP_OK) {
+//                 ESP_LOGI(TAG, "OTA check/update finished");
+//                 // If OTA succeeds, device will reboot immediately.
+//             } else {
+//                 ESP_LOGW(TAG, "OTA check/update failed or no update");
+//             }
+//             last_ota_check = now;
+//         }
+
+//         // Delay before next log sync iteration
+//         vTaskDelay(pdMS_TO_TICKS(5000));
+//     }
+// }
+
+void maintenance_task(void *pvParameters)
 {
     TickType_t last_ota_check = 0;
+    TickType_t last_time_sync = 0;
 
-    for (;;)
+    while (1)
     {
-        // Wait until WiFi connected (blocks)
-        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
+        // Wait until WiFi connected (blocks until connected)
+        xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED_BIT,
+                            pdFALSE, pdFALSE, portMAX_DELAY);
 
+        // --- SPIFFS Log Sync ---
         ESP_LOGI(TAG, "WiFi connected; attempting to sync stored logs");
-        led_set_color_indefinite(LED_MAGENTA);
+        led_set_color_indefinite(LED_CYAN);
         spiffs_logger_send_all();
 
         TickType_t now = xTaskGetTickCount();
-        if (now - last_ota_check > pdMS_TO_TICKS(OTA_CHECK_INTERVAL_MS)) {
+
+        // --- Time Sync (every 1 hour) ---
+        if ((now - last_time_sync) > pdMS_TO_TICKS(3600000)) // 1 hour
+        {
+            esp_err_t res = rtc_sync_if_needed(0);
+            if (res == ESP_OK)
+                ESP_LOGI(TAG, "Time sync successful");
+            else
+                ESP_LOGW(TAG, "Time sync failed");
+
+            last_time_sync = now;
+        }
+
+        // --- OTA Check (every OTA_CHECK_INTERVAL_MS) ---
+        if ((now - last_ota_check) > pdMS_TO_TICKS(OTA_CHECK_INTERVAL_MS))
+        {
             ESP_LOGI(TAG, "Time to check for OTA update");
             esp_err_t err = ota_check_and_update();
-            if (err == ESP_OK) {
+            if (err == ESP_OK)
+            {
                 ESP_LOGI(TAG, "OTA check/update finished");
-                // If OTA succeeds, device will reboot immediately.
-            } else {
+                // OTA success will reboot device automatically
+            }
+            else
+            {
                 ESP_LOGW(TAG, "OTA check/update failed or no update");
             }
             last_ota_check = now;
         }
 
-        // Delay before next log sync iteration
-        vTaskDelay(pdMS_TO_TICKS(5000));
+        // --- Delay before next sync iteration ---
+        vTaskDelay(pdMS_TO_TICKS(5000)); // 5 sec loop
     }
 }

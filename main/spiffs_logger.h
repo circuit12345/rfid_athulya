@@ -9,5 +9,5 @@ esp_err_t spiffs_logger_send_all(void);
 
 /* Initialize SPIFFS */
 esp_err_t spiffs_logger_init(void);
-void spiffs_sync_task(void *pvParameters);
+void maintenance_task(void *pvParameters);
 #endif
