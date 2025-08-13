@@ -147,7 +147,7 @@ esp_err_t rtc_sync_if_needed(uint32_t interval_hours) {
     static time_t last_sync = 0;
     time_t now;
     time(&now);
-    if (difftime(now, last_sync) >= (interval_hours * 3600)) {
+    if (interval_hours == 0 || difftime(now, last_sync) >= (interval_hours * 3600)) {
         if (rtc_set_time_from_ntp() == ESP_OK) {
             last_sync = now;
             return ESP_OK;
@@ -174,6 +174,6 @@ void sntp_init_once()
 {
     ESP_LOGI(TAG, "Starting SNTP...");
     sntp_setoperatingmode(SNTP_OPMODE_POLL);
-    sntp_setservername(0, "pool.ntp.org");
+    sntp_setservername(0, "time.google.com");
     sntp_init();
 }

@@ -90,6 +90,7 @@ void wifi_event_handler(void *arg, esp_event_base_t event_base,
         {
             xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED_BIT);
             ESP_LOGI(TAG, "Got IP. Connected.");
+            rtc_sync_if_needed(0);
         }
     }
 }
@@ -118,6 +119,7 @@ void save_ap_credentials_to_nvs(void)
 
 void load_ap_credentials_from_nvs(void)
 {
+    update_ap_ssid();
     nvs_handle_t handle;
     size_t ssid_size = sizeof(g_ap_ssid);
     size_t pass_size = sizeof(g_ap_pass);
@@ -144,4 +146,32 @@ void load_ap_credentials_from_nvs(void)
         // Defaults from global.c will be used
         ESP_LOGE("NVS", "Failed to open NVS: %s, using defaults", esp_err_to_name(err));
     }
+}
+#define PARAM_SAFE_LEN   8  // (64 - NODE_ and underscores) / 5
+
+void update_ap_ssid() {
+    char pType[PARAM_SAFE_LEN + 1];
+    char rNum[PARAM_SAFE_LEN + 1];
+    char loc[PARAM_SAFE_LEN + 1];
+    char tower[PARAM_SAFE_LEN + 1];
+    char floor[PARAM_SAFE_LEN + 1];
+    
+    strncpy(pType, g_placeType, PARAM_SAFE_LEN);
+    pType[PARAM_SAFE_LEN] = '\0';
+
+    strncpy(rNum, g_roomNumber, PARAM_SAFE_LEN);
+    rNum[PARAM_SAFE_LEN] = '\0';
+
+    strncpy(loc, g_location, PARAM_SAFE_LEN);
+    loc[PARAM_SAFE_LEN] = '\0';
+
+    strncpy(tower, g_tower, PARAM_SAFE_LEN);
+    tower[PARAM_SAFE_LEN] = '\0';
+
+    strncpy(floor, g_floorNumber, PARAM_SAFE_LEN);
+    floor[PARAM_SAFE_LEN] = '\0';
+
+    snprintf(g_ap_ssid, sizeof(g_ap_ssid),
+             "%s_%s_%s_%s_%s",
+             pType, rNum, loc, tower, floor);
 }

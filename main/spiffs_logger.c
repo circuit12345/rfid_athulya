@@ -126,7 +126,7 @@ void maintenance_task(void *pvParameters)
 
         // --- SPIFFS Log Sync ---
         ESP_LOGI(TAG, "WiFi connected; attempting to sync stored logs");
-        led_set_color_indefinite(LED_CYAN);
+        led_set_color_indefinite(LED_WHITE);
         spiffs_logger_send_all();
 
         TickType_t now = xTaskGetTickCount();
