@@ -1,4 +1,4 @@
-# idf_component_register(SRCS  "main.c" "global.c" "gpio.c" "nvs_handle.c" "ota_handle.c" "rfid.c" "webserver.c" "wifi.c"
+# idf_component_register(SRCS  "global.c" "gpio.c" "nvs_handle.c" "ota_handle.c" "rfid.c" "webserver.c" "wifi.c"
 #                         INCLUDE_DIRS "."
 #                         REQUIRES rc522 
 

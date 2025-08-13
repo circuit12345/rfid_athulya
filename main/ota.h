@@ -3,7 +3,9 @@
 
 #include "esp_err.h"
 
-#define APP_VERSION "1.0.2"  // Current firmware version string
+//#define APP_VERSION "1.0.1"  // Current firmware version string
+
+#define APP_VERSION "1.0.3"
 
 //#define APP_VERSION "1.0.2"  // Current firmware version string
 
