@@ -53,7 +53,7 @@ esp_err_t index_get_handler(httpd_req_t *req)
         "</script>"
         "</head>"
         "<body>"
-        "<h1>ESP32 Wi-Fi Configuration</h1>"
+        "<h1>NODE CONFIGURATION</h1>"
         "<form action='/config' method='POST' onsubmit='ensureRoomValue()'>"
         "<input type='text' name='ssid' placeholder='Wi-Fi SSID' required><br>"
         "<input type='password' name='password' placeholder='Wi-Fi Password' required><br>"
@@ -88,8 +88,7 @@ esp_err_t index_get_handler(httpd_req_t *req)
         "<div id='commonFields' style='display:none;'><input type='text' name='location' placeholder='Location'><br><input type='text' name='tower' placeholder='Tower'><br><input type='text' name='floorNumber' placeholder='Floor'><br></div>"
         "<input type='hidden' name='roomNumber' id='roomNumberHidden'>"
         "<input type='submit' value='Save Configuration'>"
-        "</form>"
-        //"<form action='/ota' method='POST'><button type='submit'>OTA Update</button></form>"
+        "</form>" 
         "</body></html>";
 
     httpd_resp_set_type(req, "text/html");

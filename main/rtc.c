@@ -90,7 +90,7 @@ esp_err_t rtc_set_time_from_ntp(void) {
     tzset();
 
     int retry = 0;
-    const int retry_count = 5;
+    const int retry_count = 8;
     time_t now = 0;
     struct tm timeinfo = { 0 };
 

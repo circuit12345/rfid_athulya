@@ -8,7 +8,7 @@
 #define I2C_MASTER_SCL_IO           22      // Change to your SCL pin
 #define I2C_MASTER_SDA_IO           21      // Change to your SDA pin
 #define I2C_MASTER_NUM              I2C_NUM_0
-#define I2C_MASTER_FREQ_HZ          100000
+//#define I2C_MASTER_FREQ_HZ          100000
 #define DS3231_ADDR                 0x68
 
 esp_err_t rtc_hw084_init(void);
