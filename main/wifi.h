@@ -9,5 +9,5 @@ void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t event_id
 void ap_name_creation();
 void save_ap_credentials_to_nvs(void);
 void load_ap_credentials_from_nvs(void) ;
-
+void update_ap_ssid();
 #endif  // End of WIFI_H header guard

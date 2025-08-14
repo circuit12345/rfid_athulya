@@ -56,7 +56,7 @@ void app_main(void)
         ESP_LOGW(TAG, "SPIFFS init failed - offline logging disabled");
     }
     sntp_init_once();
-    rtc_set_time_from_ntp();
+   // rtc_set_time_from_ntp();
 
     /* Initialize RFID module after queue exists */
     rfid_init_module();
