@@ -2,7 +2,7 @@
 
 esp_err_t index_get_handler(httpd_req_t *req)
 {
-    const char *html =
+        const char *html =
     "<!DOCTYPE html>"
     "<html>"
     "<head>"
@@ -18,51 +18,68 @@ esp_err_t index_get_handler(httpd_req_t *req)
     "#hostelTypeSelector { text-align:left; margin-top:10px; font-weight:bold; }"
     "</style>"
     "<script>"
+    "function el(id){return document.getElementById(id);} "
+    "function show(id){var e=el(id); if(e){e.style.display='block';}} "
+    "function hide(id){var e=el(id); if(e){e.style.display='none';}} "
     "function updateForm(){"
-    "const type=document.getElementById('placeType').value;"
-    "const fields=['roomFields','officeFields','doctorFields','ebFields','stockFields','menHostelFields','womenHostelFields','othersFields'];"
-    "fields.forEach(id=>document.getElementById(id).style.display='none');"
-    "document.getElementById('commonFields').style.display='block';"
-    "if(type==='Room')document.getElementById('roomFields').style.display='block';"
-    "else if(type==='Office')document.getElementById('officeFields').style.display='block';"
-    "else if(type==='Doctor')document.getElementById('doctorFields').style.display='block';"
-    "else if(type==='EB')document.getElementById('ebFields').style.display='block';"
-    "else if(type==='Store/Stock')document.getElementById('stockFields').style.display='block';"
-    "else if(type==='Hostel'){"
-    "document.getElementById('hostelTypeSelector').style.display='block';"
-    "const gender=document.querySelector('input[name=\"hostelType\"]:checked');"
-    "if(gender&&gender.value==='Women')document.getElementById('womenHostelFields').style.display='block';"
-    "else document.getElementById('menHostelFields').style.display='block';"
-    "}else{document.getElementById('hostelTypeSelector').style.display='none';}"
-    "if(type==='Others')document.getElementById('othersFields').style.display='block';"
+    "  var tEl = el('placeType');"
+    "  var type = tEl ? tEl.value : '';"
+    "  var ids=['roomFields','officeFields','doctorFields','ebFields','stockFields','menHostelFields','womenHostelFields','othersFields','floorDeviceFields','nurseStationFields'];"
+    "  for(var i=0;i<ids.length;i++){ hide(ids[i]); }"
+    "  show('commonFields');"
+    "  if(type==='Room') show('roomFields');"
+    "  else if(type==='Office') show('officeFields');"
+    "  else if(type==='Doctor') show('doctorFields');"
+    "  else if(type==='EB') show('ebFields');"
+    "  else if(type==='Store/Stock') show('stockFields');"
+    "  else if(type==='Hostel'){"
+    "    show('hostelTypeSelector');"
+    "    var gender=document.querySelector('input[name=\\\"hostelType\\\"]:checked');"
+    "    if(gender && gender.value==='Women') show('womenHostelFields');"
+    "    else show('menHostelFields');"
+    "  } else { hide('hostelTypeSelector'); }"
+    "  if(type==='Others') show('othersFields');"
+    "  if(type==='Floor Device') show('floorDeviceFields');"
+    "  if(type==='Nurse Station') show('nurseStationFields');"
     "}"
     "function ensureRoomValue(){"
-    "const type=document.getElementById('placeType').value;"
-    "let value=type;"
-    "if(type==='Room')value=document.getElementById('roomNumberRoom').value;"
-    "else if(type==='Doctor')value=document.getElementById('roomNumberDoctor').value;"
-    "else if(type==='EB')value=document.getElementById('roomNumberEB').value;"
-    "else if(type==='Office')value=document.getElementById('roomNumberOffice').value;"
-    "else if(type==='Store/Stock')value=document.getElementById('roomNumberStock').value;"
-    "else if(type==='Hostel'){"
-    "const gender=document.querySelector('input[name=\"hostelType\"]:checked');"
-    "if(gender&&gender.value==='Women'){"
-    "const wValue=document.getElementById('roomNumberWomen').value;"
-    "value=wValue?\"Women_\"+wValue:\"Women\";"
-    "}else{value='Men';}"
+    "  var type = (el('placeType')||{}).value || '';"
+    "  var value = type;"
+    "  if(type==='Room') value = (el('roomNumberRoom')||{}).value || '';"
+    "  else if(type==='Doctor') value = (el('roomNumberDoctor')||{}).value || '';"
+    "  else if(type==='EB') value = (el('roomNumberEB')||{}).value || '';"
+    "  else if(type==='Office') value = (el('roomNumberOffice')||{}).value || '';"
+    "  else if(type==='Store/Stock') value = (el('roomNumberStock')||{}).value || '';"
+    "  else if(type==='Hostel'){"
+    "    var gender=document.querySelector('input[name=\\\"hostelType\\\"]:checked');"
+    "    if(gender && gender.value==='Women'){"
+    "      var w=(el('roomNumberWomen')||{}).value || '';"
+    "      value = w ? ('Women_'+w) : 'Women';"
+    "    } else {"
+    "      var m=(el('roomNumberMen')||{}).value || '';"
+    "      value = m ? ('Men_'+m) : 'Men';"
+    "    }"
+    "  }"
+    "  else if(type==='Others') value = (el('roomNumberOthers')||{}).value || '';"
+    "  else if(type==='Floor Device') value = (el('roomNumberFloorDevice')||{}).value || '';"
+    "  else if(type==='Nurse Station') value = (el('roomNumberNurseStation')||{}).value || '';"
+    "  var hidden = el('roomNumberHidden'); if(hidden){ hidden.value = value; }"
     "}"
-    "else if(type==='Others')value=document.getElementById('roomNumberOthers').value;"
-    "document.getElementById('roomNumberHidden').value=value;"
-    "}"
+    "document.addEventListener('DOMContentLoaded', function(){"
+    "  var pt = el('placeType'); if(pt){ pt.addEventListener('change', updateForm); }"
+    "  var radios = document.querySelectorAll('input[name=\\\"hostelType\\\"]');"
+    "  for(var i=0;i<radios.length;i++){ radios[i].addEventListener('change', updateForm); }"
+    "  updateForm();"
+    "});"
     "</script>"
     "</head>"
-    "<body>"
+    "<body onload='updateForm()'>"
     "<h1>NODE CONFIGURATION</h1>"
     "<form action='/config' method='POST' onsubmit='ensureRoomValue()'>"
     "<input type='text' name='ssid' placeholder='Wi-Fi SSID' required><br>"
     "<input type='password' name='password' placeholder='Wi-Fi Password' required><br>"
     "<label for='placeType'>Place Type:</label>"
-    "<select id='placeType' name='placeType' onchange='updateForm()' required>"
+    "<select id='placeType' name='placeType' required>"
     "<option value='' selected disabled>Select</option>"
     "<option value='Room'>Room</option>"
     "<option value='Office'>Office</option>"
@@ -84,49 +101,117 @@ esp_err_t index_get_handler(httpd_req_t *req)
     "<option value='Nurse Station'>Nurse Station</option>"
     "<option value='Others'>Others</option>"
     "</select><br>"
+
     "<div id='roomFields' style='display:none;'><input id='roomNumberRoom' type='text' placeholder='Room Number'><br></div>"
     "<div id='officeFields' style='display:none;'><select id='roomNumberOffice'><option value='Athulya Office'>Athulya Office</option><option value='Academy Office'>Academy Office</option></select><br></div>"
     "<div id='doctorFields' style='display:none;'><input id='roomNumberDoctor' type='text' placeholder='Doctor Room Number'><br></div>"
     "<div id='ebFields' style='display:none;'><input id='roomNumberEB' type='text' placeholder='EB Identifier'><br></div>"
     "<div id='stockFields' style='display:none;'><select id='roomNumberStock'><option value='Kitchen Stock'>Kitchen Stock</option><option value='Stock Room'>Stock Room</option></select><br></div>"
+
     "<div id='hostelTypeSelector' style='display:none;'>Hostel Gender:<br>"
-    "<label><input type='radio' name='hostelType' value='Men' onchange='updateForm()'> Men</label>"
-    "<label><input type='radio' name='hostelType' value='Women' onchange='updateForm()'> Women</label>"
+    "<label><input type='radio' name='hostelType' value='Men'> Men</label>"
+    "<label><input type='radio' name='hostelType' value='Women'> Women</label>"
     "</div>"
-    "<div id='menHostelFields' style='display:none;'><label>Hostel Type: Men</label><br></div>"
+
+    /* Men Hostel */
+    "<div id='menHostelFields' style='display:none;'>"
+    "<label>Hostel Type: Men</label><br>"
+    "<input id='roomNumberMen' type='text' placeholder='Men Hostel Room Number'><br>"
+    "</div>"
+
     "<div id='womenHostelFields' style='display:none;'><input id='roomNumberWomen' type='text' placeholder='Women Hostel Room Number'><br></div>"
+
+    /* Floor Device */
+    "<div id='floorDeviceFields' style='display:none;'><input id='roomNumberFloorDevice' type='text' placeholder='Floor Device Identifier'><br></div>"
+
+    /* Nurse Station */
+    "<div id='nurseStationFields' style='display:none;'><input id='roomNumberNurseStation' type='text' placeholder='Nurse Station Identifier'><br></div>"
+
     "<div id='othersFields' style='display:none;'><input id='roomNumberOthers' type='text' placeholder='Enter Place Name'><br></div>"
-    "<div id='commonFields' style='display:none;'><input type='text' name='location' placeholder='Location'><br><input type='text' name='tower' placeholder='Tower'><br><input type='text' name='floorNumber' placeholder='Floor'><br></div>"
+
+    "<div id='commonFields' style='display:none;'>"
+    "<input type='text' name='location' placeholder='Location'><br>"
+    "<input type='text' name='tower' placeholder='Tower'><br>"
+    "<input type='text' name='floorNumber' placeholder='Floor'><br>"
+    "</div>"
+
     "<input type='hidden' name='roomNumber' id='roomNumberHidden'>"
     "<input type='submit' value='Save Configuration'>"
-    "</form>" 
+    "</form>"
     "</body></html>";
-
-
 
     httpd_resp_set_type(req, "text/html");
     return httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
 }
 
+// static char* get_param(const char *buf, const char *key, char *value, size_t max_len)
+// {
+//     memset(value, 0, max_len);
+//     char *start = strstr(buf, key);
+//     if (!start)
+//         return value;
+//     start += strlen(key) + 1; // skip key=
+//     char *end = strchr(start, '&');
+//     if (!end)
+//         end = (char *)buf + strlen(buf);
+//     int len = end - start;
+//     if (len >= max_len)
+//         len = max_len - 1;
+//     strncpy(value, start, len);
+//     // Replace '+' with space (URL encoding)
+//     for (int i = 0; i < len; i++)
+//         if (value[i] == '+')
+//             value[i] = ' ';
+//     return value;
+// }
+
+
 static char* get_param(const char *buf, const char *key, char *value, size_t max_len)
 {
     memset(value, 0, max_len);
-    char *start = strstr(buf, key);
+
+    // Look for "key=" in the buffer
+    const char *start = strstr(buf, key);
     if (!start)
         return value;
-    start += strlen(key) + 1; // skip key=
-    char *end = strchr(start, '&');
+
+    start += strlen(key);
+    if (*start != '=')
+        return value;
+    start++; // skip '='
+
+    // Find end position (& or end of string)
+    const char *end = strchr(start, '&');
     if (!end)
-        end = (char *)buf + strlen(buf);
-    int len = end - start;
-    if (len >= max_len)
-        len = max_len - 1;
-    strncpy(value, start, len);
-    // Replace '+' with space (URL encoding)
-    for (int i = 0; i < len; i++)
-        if (value[i] == '+')
-            value[i] = ' ';
+        end = buf + strlen(buf);
+
+    // Copy into temp (encoded)
+    size_t encoded_len = end - start;
+    if (encoded_len >= max_len)
+        encoded_len = max_len - 1;
+
+    char temp[encoded_len + 1];
+    strncpy(temp, start, encoded_len);
+    temp[encoded_len] = '\0';
+
+    // --- URL decode ---
+    size_t i = 0, j = 0;
+    while (temp[i] != '\0' && j < max_len - 1) {
+        if (temp[i] == '%' && isxdigit((unsigned char)temp[i+1]) && isxdigit((unsigned char)temp[i+2])) {
+            char hex[3] = { temp[i+1], temp[i+2], '\0' };
+            value[j++] = (char) strtol(hex, NULL, 16);
+            i += 3;
+        } else if (temp[i] == '+') {
+            value[j++] = ' ';
+            i++;
+        } else {
+            value[j++] = temp[i++];
+        }
+    }
+    value[j] = '\0'; // null terminate
+
     return value;
+
 }
 
 esp_err_t config_device_handler(httpd_req_t *req)
@@ -236,6 +321,7 @@ esp_err_t config_device_handler(httpd_req_t *req)
     // esp_wifi_set_config(WIFI_IF_STA, &wifi_config);
     // esp_wifi_connect();
     update_ap_ssid();
+    save_ap_credentials_to_nvs();
     switch_wifi_mode(false);
     // Send confirmation response
     httpd_resp_set_type(req, "text/html");
