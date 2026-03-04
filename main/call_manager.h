@@ -27,7 +27,7 @@ typedef struct {
 } call_info_t;
 
 // GPIO Pins for buttons
-#define CALL_BUTTON_GPIO    GPIO_NUM_2     // CALL button
+#define CALL_BUTTON_GPIO    GPIO_NUM_16    // CALL button
 #define CANCEL_BUTTON_GPIO  GPIO_NUM_12    // CANCEL button
 #define BLUECODE_BUTTON_GPIO GPIO_NUM_15   // BLUECODE button
 

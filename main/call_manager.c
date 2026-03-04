@@ -30,11 +30,11 @@ static esp_err_t init_mqtt_client(void)
         return ESP_OK;
     }
 
-    esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.1.100:1883",  // Change to your local MQTT server IP
-        .credentials.username = "user",
-        .credentials.authentication.password = "password",
-    };
+esp_mqtt_client_config_t mqtt_cfg = {
+    .broker.address.uri = "mqtt://127.0.0.1:1883",  // Try localhost first
+};
+    // If using remote server, change to:
+    // .broker.address.uri = "mqtt://192.168.1.7:1883",
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     if (mqtt_client == NULL) {

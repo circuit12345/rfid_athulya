@@ -89,7 +89,7 @@ extern SemaphoreHandle_t wifi_switch_semaphore;
 #define BLUE_LED GPIO_NUM_27
 #define BUZZER GPIO_NUM_4
 #define APMODE GPIO_NUM_14
-#define CALL_BUTTON GPIO_NUM_2
+#define CALL_BUTTON GPIO_NUM_16
 #define CANCEL_BUTTON GPIO_NUM_12
 #define BLUECODE_BUTTON GPIO_NUM_15
 
