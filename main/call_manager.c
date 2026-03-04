@@ -30,11 +30,27 @@ static esp_err_t init_mqtt_client(void)
         return ESP_OK;
     }
 
-esp_mqtt_client_config_t mqtt_cfg = {
-    .broker.address.uri = "mqtt://127.0.0.1:1883",  // Try localhost first
-};
-    // If using remote server, change to:
-    // .broker.address.uri = "mqtt://192.168.1.7:1883",
+    // Wait for WiFi to connect before trying MQTT
+    int retry_count = 0;
+    while (!wifi_is_connected() && retry_count < 30) {
+        ESP_LOGI(TAG, "Waiting for WiFi connection... (%d/30)", retry_count + 1);
+        vTaskDelay(pdMS_TO_TICKS(500));
+        retry_count++;
+    }
+    
+    if (!wifi_is_connected()) {
+        ESP_LOGW(TAG, "WiFi not connected, MQTT will retry later");
+        return ESP_FAIL;
+    }
+    
+    ESP_LOGI(TAG, "WiFi connected, initializing MQTT...");
+
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = "mqtt://192.168.1.7:1883",  // Your MQTT server
+        // .keepalive = 60,
+        // .buffer_size = 1024,
+        // .task_stack = 6144,
+    };
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
     if (mqtt_client == NULL) {
@@ -49,7 +65,7 @@ esp_mqtt_client_config_t mqtt_cfg = {
         return ret;
     }
 
-    ESP_LOGI(TAG, "MQTT client initialized");
+    ESP_LOGI(TAG, "MQTT client started and connecting...");
     return ESP_OK;
 }
 
@@ -62,18 +78,31 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "MQTT connected");
+            ESP_LOGI(TAG, "✓ MQTT CONNECTED to broker");
             break;
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGW(TAG, "MQTT disconnected");
+            ESP_LOGW(TAG, "✗ MQTT DISCONNECTED from broker");
+            break;
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT subscribed, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT unsubscribed, msg_id=%d", event->msg_id);
             break;
         case MQTT_EVENT_PUBLISHED:
-            ESP_LOGI(TAG, "MQTT message published");
+            ESP_LOGI(TAG, "✓ MQTT message published, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI(TAG, "MQTT data received");
             break;
         case MQTT_EVENT_ERROR:
-            ESP_LOGE(TAG, "MQTT error");
+            ESP_LOGE(TAG, "✗ MQTT ERROR");
+            if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+                ESP_LOGE(TAG, "MQTT TCP Error: %d", event->error_handle->esp_transport_sock_errno);
+            }
             break;
         default:
+            ESP_LOGD(TAG, "MQTT other event id: %d", event->event_id);
             break;
     }
 }
@@ -84,7 +113,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 static void escalation_timer_callback(TimerHandle_t xTimer)
 {
     if (xSemaphoreTake(call_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        if (g_current_call.state == CALL_STATE_ACTIVE && !g_current_call.is_attended) {
+        // escalate only if it's a normal CALL; do not override BLUECODE
+        if (g_current_call.state == CALL_STATE_ACTIVE && !g_current_call.is_attended
+            && g_current_call.type == CALL_TYPE_CALL) {
             ESP_LOGI(TAG, "Call escalated to EMERGENCY after 2 minutes");
             g_current_call.type = CALL_TYPE_EMERGENCY;
             g_current_call.state = CALL_STATE_ESCALATED;
@@ -124,9 +155,8 @@ static void send_call_to_mqtt(call_type_t call_type, const char *uid, bool is_at
         cJSON_AddBoolToObject(root, "attended", false);
     }
     
-    // Add timestamp
-    time_t now = time(NULL);
-    cJSON_AddNumberToObject(root, "timestamp", now);
+    // Add timestamp string from RTC
+    cJSON_AddStringToObject(root, "timestamp", rtc_get_timestamp());
     
     char *json = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -308,8 +338,8 @@ void call_manager_init(void)
 
     // Initialize MQTT client (non-critical - buttons work without it)
     if (init_mqtt_client() != ESP_OK) {
-        ESP_LOGW(TAG, "MQTT initialization failed - local calls won't be sent (will retry on next init)");
-        // Don't return - continue with button setup anyway
+        ESP_LOGW(TAG, "MQTT initialization failed - will retry on next connection");
+        // Don't return - buttons still work fine
     } else {
         ESP_LOGI(TAG, "MQTT client initialized successfully");
     }
