@@ -41,6 +41,8 @@
 #include "rtc.h"
 #include "ota.h"
 #include "led.h"
+#include "mqtt_client.h"
+#include "call_manager.h"
 
 #define RESPONSE_BUFFER_SIZE 14000 
 #define WEB_SERVER_URL "https://tamsen.in/rfid/log_entry.php"
@@ -87,6 +89,9 @@ extern SemaphoreHandle_t wifi_switch_semaphore;
 #define BLUE_LED GPIO_NUM_27
 #define BUZZER GPIO_NUM_4
 #define APMODE GPIO_NUM_14
+#define CALL_BUTTON GPIO_NUM_2
+#define CANCEL_BUTTON GPIO_NUM_12
+#define BLUECODE_BUTTON GPIO_NUM_15
 
 typedef struct
 {
