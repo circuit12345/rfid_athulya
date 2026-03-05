@@ -1,5 +1,6 @@
 #include "led.h"
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
@@ -21,6 +22,20 @@ static bool blink_state = false;
 static bool call_manager_owns_led = false;
 static led_color_t call_manager_color = LED_OFF;
 
+// Buzzer PWM control
+static uint8_t buzzer_volume = 50;  // 0-100% volume (default 50%)
+#define BUZZER_LEDC_CHANNEL LEDC_CHANNEL_0
+#define BUZZER_LEDC_TIMER LEDC_TIMER_0
+#define BUZZER_PWM_FREQ 4000  // 4kHz PWM frequency for buzzer
+#define BUZZER_PWM_RESOLUTION LEDC_TIMER_8_BIT  // 8-bit resolution (0-255)
+
+static void buzzer_set_pwm(uint8_t duty)
+{
+    // Set buzzer PWM duty cycle (0-255, where 255 is max volume)
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, BUZZER_LEDC_CHANNEL, duty);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, BUZZER_LEDC_CHANNEL);
+}
+
 static void set_gpio_levels(led_color_t color)
 {
     // Turn on/off GPIO pins based on color enum
@@ -30,59 +45,58 @@ static void set_gpio_levels(led_color_t color)
         gpio_set_level(RED_LED, 0);
         gpio_set_level(GREEN_LED, 0);
         gpio_set_level(BLUE_LED, 0);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);  // PWM off for buzzer
         break;
     case LED_RED:
         gpio_set_level(RED_LED, 1);
         gpio_set_level(GREEN_LED, 0);
         gpio_set_level(BLUE_LED, 0);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     case LED_GREEN:
         gpio_set_level(RED_LED, 0);
         gpio_set_level(GREEN_LED, 1);
         gpio_set_level(BLUE_LED, 0);
-        gpio_set_level(BUZZER, 1);
-
+        buzzer_set_pwm((buzzer_volume * 255) / 100);  // Set buzzer to current volume
         break;
     case LED_BLUE:
         gpio_set_level(RED_LED, 0);
         gpio_set_level(GREEN_LED, 0);
         gpio_set_level(BLUE_LED, 1);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     case LED_YELLOW: // RED + GREEN
         gpio_set_level(RED_LED, 1);
         gpio_set_level(GREEN_LED, 1);
         gpio_set_level(BLUE_LED, 0);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     case LED_CYAN: // GREEN + BLUE
         gpio_set_level(RED_LED, 0);
         gpio_set_level(GREEN_LED, 1);
         gpio_set_level(BLUE_LED, 1);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     case LED_MAGENTA: // RED + BLUE
         gpio_set_level(RED_LED, 1);
         gpio_set_level(GREEN_LED, 0);
         gpio_set_level(BLUE_LED, 1);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     case LED_WHITE: // RED + GREEN + BLUE
         gpio_set_level(RED_LED, 1);
         gpio_set_level(GREEN_LED, 1);
         gpio_set_level(BLUE_LED, 1);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
-    case RING: // RED + GREEN + BLUE
-        gpio_set_level(BUZZER, 0);
+    case RING:
+        buzzer_set_pwm(0);
         break;
     default:
         gpio_set_level(RED_LED, 0);
         gpio_set_level(GREEN_LED, 0);
         gpio_set_level(BLUE_LED, 0);
-        gpio_set_level(BUZZER, 0);
+        buzzer_set_pwm(0);
         break;
     }
 }
@@ -123,13 +137,12 @@ void led_init(void)
     if (led_mutex == NULL)
     {
         ESP_LOGE(TAG, "Failed to create led_mutex");
-        // Handle error: mutex creation failed — you may want to abort or retry
         return;
     }
 
-    // Configure LED GPIO pins as outputs
+    // Configure LED GPIO pins as outputs (but NOT buzzer - it will use LEDC)
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << RED_LED) | (1ULL << GREEN_LED) | (1ULL << BUZZER) | (1ULL << BLUE_LED),
+        .pin_bit_mask = (1ULL << RED_LED) | (1ULL << GREEN_LED) | (1ULL << BLUE_LED),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -137,12 +150,31 @@ void led_init(void)
     };
     gpio_config(&io_conf);
 
+    // Configure LEDC PWM for buzzer control
+    ledc_timer_config_t pwm_timer = {
+        .duty_resolution = BUZZER_PWM_RESOLUTION,
+        .freq_hz = BUZZER_PWM_FREQ,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .timer_num = BUZZER_LEDC_TIMER,
+        .clk_cfg = LEDC_AUTO_CLK,
+    };
+    ledc_timer_config(&pwm_timer);
+
+    ledc_channel_config_t pwm_channel = {
+        .channel = BUZZER_LEDC_CHANNEL,
+        .duty = 0,
+        .gpio_num = BUZZER,
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .hpoint = 0,
+        .timer_sel = BUZZER_LEDC_TIMER,
+    };
+    ledc_channel_config(&pwm_channel);
+
     // Create timers for glow (3s timeout) and blinking (periodic)
     glow_timer = xTimerCreate("GlowTimer", pdMS_TO_TICKS(1000), pdFALSE, NULL, glow_timer_callback);
     if (glow_timer == NULL)
     {
         ESP_LOGE(TAG, "Failed to create glow_timer");
-        // Handle error
         return;
     }
 
@@ -150,7 +182,6 @@ void led_init(void)
     if (blink_timer == NULL)
     {
         ESP_LOGE(TAG, "Failed to create blink_timer");
-        // Handle error
         return;
     }
 
@@ -163,7 +194,7 @@ void led_init(void)
     // Turn off all LEDs initially
     set_gpio_levels(LED_OFF);
 
-    //ESP_LOGI(TAG, "LED module initialized successfully");
+    ESP_LOGI(TAG, "LED module initialized successfully - Buzzer volume: %d%%", buzzer_volume);
 }
 
 void led_set_color_indefinite(led_color_t color)
@@ -341,4 +372,39 @@ bool led_is_owned_by_call_manager(void)
         xSemaphoreGive(led_mutex);
     }
     return owns;
+}
+
+/**
+ * @brief Set buzzer volume level
+ * @param volume 0-100 (percentage)
+ */
+void led_set_buzzer_volume(uint8_t volume)
+{
+    if (volume > 100) volume = 100;
+    
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
+    {
+        buzzer_volume = volume;
+        // If buzzer is currently on (green LED), update PWM duty
+        if (indefinite_color == LED_GREEN || override_color == LED_GREEN) {
+            buzzer_set_pwm((buzzer_volume * 255) / 100);
+        }
+        xSemaphoreGive(led_mutex);
+        ESP_LOGI(TAG, "Buzzer volume set to %d%%", volume);
+    }
+}
+
+/**
+ * @brief Get current buzzer volume level
+ * @return volume 0-100 (percentage)
+ */
+uint8_t led_get_buzzer_volume(void)
+{
+    uint8_t vol = 0;
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
+    {
+        vol = buzzer_volume;
+        xSemaphoreGive(led_mutex);
+    }
+    return vol;
 }

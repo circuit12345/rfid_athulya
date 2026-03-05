@@ -55,6 +55,16 @@ void led_release_call_manager(void);
 bool led_is_owned_by_call_manager(void);
 
 /**
+ * @brief Set buzzer volume level (0-100%)
+ */
+void led_set_buzzer_volume(uint8_t volume);
+
+/**
+ * @brief Get current buzzer volume level (0-100%)
+ */
+uint8_t led_get_buzzer_volume(void);
+
+/**
  * @brief Get current LED mode
  */
 led_mode_t led_get_mode(void);
