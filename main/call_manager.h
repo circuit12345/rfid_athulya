@@ -8,7 +8,8 @@ typedef enum {
     CALL_TYPE_NONE = 0,
     CALL_TYPE_CALL = 1,
     CALL_TYPE_EMERGENCY = 2,
-    CALL_TYPE_BLUECODE = 3
+    CALL_TYPE_BLUECODE = 3,
+    CALL_TYPE_CANCELLED = 4
 } call_type_t;
 
 // Call state

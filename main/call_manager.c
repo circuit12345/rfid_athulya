@@ -142,6 +142,7 @@ static void send_call_to_mqtt(call_type_t call_type, const char *uid, bool is_at
     if (call_type == CALL_TYPE_CALL) call_type_str = "CALL";
     else if (call_type == CALL_TYPE_EMERGENCY) call_type_str = "EMERGENCY";
     else if (call_type == CALL_TYPE_BLUECODE) call_type_str = "BLUECODE";
+    else if (call_type == CALL_TYPE_CANCELLED) call_type_str = "CANCELLED";
     
     cJSON_AddStringToObject(root, "callType", call_type_str);
     
@@ -222,6 +223,10 @@ void cancel_button_pressed(void)
     if (xSemaphoreTake(call_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
         if (g_current_call.state != CALL_STATE_IDLE) {
             ESP_LOGI(TAG, "[BUTTON] CANCEL button pressed - canceling call");
+            
+            // Send MQTT notification that call was cancelled
+            send_call_to_mqtt(CALL_TYPE_CANCELLED, "", false);
+            
             g_current_call.type = CALL_TYPE_NONE;
             g_current_call.state = CALL_STATE_IDLE;
             g_current_call.is_attended = false;
