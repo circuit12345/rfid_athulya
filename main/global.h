@@ -45,7 +45,7 @@
 #include "call_manager.h"
 
 #define RESPONSE_BUFFER_SIZE 14000 
-#define WEB_SERVER_URL "https://tamsen.in/rfid/log_entry.php"
+#define WEB_SERVER_URL "https://tamsen.in/rfid/entry.php"
 #define OTA_CHECK_INTERVAL_MS (30 * 1000)
 #define UID_MAX_LEN 32
 #define MAX_PARAM_LEN 64

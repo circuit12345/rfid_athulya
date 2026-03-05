@@ -120,6 +120,7 @@ static void escalation_timer_callback(TimerHandle_t xTimer)
             g_current_call.type = CALL_TYPE_EMERGENCY;
             g_current_call.state = CALL_STATE_ESCALATED;
             send_call_to_mqtt(CALL_TYPE_EMERGENCY, "", false);
+            led_set_color_call_manager(LED_RED);  // Static LED - red until canceled or attended
         }
         xSemaphoreGive(call_mutex);
     }
@@ -202,7 +203,7 @@ void call_button_pressed(void)
             }
             
             send_call_to_mqtt(CALL_TYPE_CALL, "", false);
-            led_override_glow_3s(LED_YELLOW);  // LED indicator for active call
+            led_set_color_call_manager(LED_YELLOW);  // Static LED - overrides other tasks until call ends
         } else {
             ESP_LOGW(TAG, "[BUTTON] Call already active - ignoring new call");
         }
@@ -230,7 +231,8 @@ void cancel_button_pressed(void)
                 xTimerStop(escalation_timer, pdMS_TO_TICKS(100));
             }
             
-            led_override_glow_3s(LED_CYAN);  // LED indicator for canceled call
+            // Release LED control when call is canceled
+            led_release_call_manager();
         } else {
             ESP_LOGW(TAG, "[BUTTON] No active call to cancel");
         }
@@ -264,7 +266,7 @@ void bluecode_button_pressed(void)
             }
             
             send_call_to_mqtt(CALL_TYPE_BLUECODE, "", false);
-            led_override_glow_3s(LED_BLUE);  // LED indicator for BLUECODE
+            led_set_color_call_manager(LED_BLUE);  // Static LED - blue until canceled or attended
         } else {
             ESP_LOGW(TAG, "[BUTTON] Call already active - ignoring BLUECODE");
         }
@@ -296,9 +298,16 @@ void rfid_response_to_call(const char *uid, const char *timestamp)
             g_current_call.type = CALL_TYPE_NONE;
             g_current_call.state = CALL_STATE_IDLE;
             
-            led_override_glow_3s(LED_GREEN);  // LED indicator for attended call
+            // Release LED control and set brief green flash for attended call
+            led_set_color_call_manager(LED_GREEN);  // Indicate attended with green
         }
         xSemaphoreGive(call_mutex);
+    }
+    
+    // After releasing the mutex, wait briefly then turn off LED
+    if (g_current_call.is_attended) {
+        vTaskDelay(pdMS_TO_TICKS(1500));
+        led_release_call_manager();
     }
 }
 
@@ -321,6 +330,13 @@ call_info_t get_current_call_info(void)
 bool is_call_active(void)
 {
     return get_current_call_info().state != CALL_STATE_IDLE;
+}
+
+bool is_call_blinking(void)
+{
+    call_info_t info = get_current_call_info();
+    return (info.state != CALL_STATE_IDLE && 
+            (info.type == CALL_TYPE_BLUECODE || info.type == CALL_TYPE_CALL));
 }
 
 

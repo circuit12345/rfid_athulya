@@ -39,6 +39,22 @@ void led_override_glow_3s(led_color_t color);
 void led_override_blink(led_color_t color);
 
 /**
+ * @brief Set LED with call manager ownership - static/persistent until released
+ * This prevents other tasks from changing the LED until call_manager_release_led() is called
+ */
+void led_set_color_call_manager(led_color_t color);
+
+/**
+ * @brief Release LED control back to normal mode
+ */
+void led_release_call_manager(void);
+
+/**
+ * @brief Check if call manager owns the LED
+ */
+bool led_is_owned_by_call_manager(void);
+
+/**
  * @brief Get current LED mode
  */
 led_mode_t led_get_mode(void);

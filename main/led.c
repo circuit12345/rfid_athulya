@@ -4,6 +4,7 @@
 #include "freertos/semphr.h"
 #include "freertos/timers.h"
 #include "esp_log.h"
+#include "call_manager.h"
 
 static SemaphoreHandle_t led_mutex;
 
@@ -15,6 +16,10 @@ static led_color_t indefinite_color = LED_OFF;
 static led_color_t override_color = LED_OFF;
 
 static bool blink_state = false;
+
+// Call manager LED ownership variables
+static bool call_manager_owns_led = false;
+static led_color_t call_manager_color = LED_OFF;
 
 static void set_gpio_levels(led_color_t color)
 {
@@ -165,14 +170,22 @@ void led_set_color_indefinite(led_color_t color)
 {
     if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
     {
-        // Stop any overrides
+        // Don't change LED if call manager owns it
+        if (call_manager_owns_led) {
+            xSemaphoreGive(led_mutex);
+            ESP_LOGD(TAG, "LED indefinite request blocked - call manager owns LED");
+            return;
+        }
+
+        // Stop any overrides UNLESS a call is actively blinking
         if (current_mode != LED_MODE_INDEFINITE)
         {
             if (xTimerIsTimerActive(glow_timer))
             {
                 xTimerStop(glow_timer, 0);
             }
-            if (xTimerIsTimerActive(blink_timer))
+            // Only stop blink if no active call is using it
+            if (xTimerIsTimerActive(blink_timer) && !is_call_blinking())
             {
                 xTimerStop(blink_timer, 0);
             }
@@ -180,7 +193,11 @@ void led_set_color_indefinite(led_color_t color)
         current_mode = LED_MODE_INDEFINITE;
         indefinite_color = color;
         override_color = LED_OFF;
-        set_gpio_levels(color);
+        // Only change LED if not actively blinking a call
+        if (!is_call_blinking())
+        {
+            set_gpio_levels(color);
+        }
         xSemaphoreGive(led_mutex);
 
         //ESP_LOGI(TAG, "Set indefinite LED color %d", color);
@@ -191,6 +208,13 @@ void led_override_glow_3s(led_color_t color)
 {
     if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
     {
+        // Don't change LED if call manager owns it
+        if (call_manager_owns_led) {
+            xSemaphoreGive(led_mutex);
+            ESP_LOGD(TAG, "LED glow request blocked - call manager owns LED");
+            return;
+        }
+
         // Stop blink timer if running
         if (current_mode == LED_MODE_BLINK && xTimerIsTimerActive(blink_timer))
         {
@@ -214,6 +238,13 @@ void led_override_blink(led_color_t color)
 {
     if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
     {
+        // Don't change LED if call manager owns it
+        if (call_manager_owns_led) {
+            xSemaphoreGive(led_mutex);
+            ESP_LOGD(TAG, "LED blink request blocked - call manager owns LED");
+            return;
+        }
+
         // Stop glow timer if running
         if (current_mode == LED_MODE_GLOW_3S && xTimerIsTimerActive(glow_timer))
         {
@@ -243,4 +274,71 @@ led_mode_t led_get_mode(void)
         xSemaphoreGive(led_mutex);
     }
     return mode;
+}
+
+/**
+ * @brief Set LED color with call manager ownership - static/persistent until released
+ * This prevents other tasks from changing the LED until led_release_call_manager() is called
+ */
+void led_set_color_call_manager(led_color_t color)
+{
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
+    {
+        // Stop any active timers since call manager now owns the LED
+        if (xTimerIsTimerActive(glow_timer))
+        {
+            xTimerStop(glow_timer, 0);
+        }
+        if (xTimerIsTimerActive(blink_timer))
+        {
+            xTimerStop(blink_timer, 0);
+        }
+
+        call_manager_owns_led = true;
+        call_manager_color = color;
+        current_mode = LED_MODE_INDEFINITE;  // Static mode - no timers
+        override_color = LED_OFF;
+        blink_state = false;
+
+        set_gpio_levels(color);
+
+        xSemaphoreGive(led_mutex);
+        ESP_LOGI(TAG, "Call manager took LED ownership with color %d", color);
+    }
+}
+
+/**
+ * @brief Release LED control back to normal mode (LED_OFF)
+ */
+void led_release_call_manager(void)
+{
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
+    {
+        call_manager_owns_led = false;
+        call_manager_color = LED_OFF;
+        indefinite_color = LED_OFF;
+        override_color = LED_OFF;
+        current_mode = LED_MODE_INDEFINITE;
+        blink_state = false;
+
+        // Turn off all LEDs
+        set_gpio_levels(LED_OFF);
+
+        xSemaphoreGive(led_mutex);
+        ESP_LOGI(TAG, "Call manager released LED control");
+    }
+}
+
+/**
+ * @brief Check if call manager owns the LED
+ */
+bool led_is_owned_by_call_manager(void)
+{
+    bool owns = false;
+    if (xSemaphoreTake(led_mutex, pdMS_TO_TICKS(100)))
+    {
+        owns = call_manager_owns_led;
+        xSemaphoreGive(led_mutex);
+    }
+    return owns;
 }

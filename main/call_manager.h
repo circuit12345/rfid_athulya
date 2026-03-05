@@ -26,7 +26,8 @@ typedef struct {
     bool is_attended;
 } call_info_t;
 
-// GPIO Pins for buttons
+// GPIO Pins for buttojomlkmk,onjolmklmom
+// ns
 #define CALL_BUTTON_GPIO    GPIO_NUM_16    // CALL button
 #define CANCEL_BUTTON_GPIO  GPIO_NUM_12    // CANCEL button
 #define BLUECODE_BUTTON_GPIO GPIO_NUM_15   // BLUECODE button
@@ -42,5 +43,6 @@ void call_manager_task(void *arg);
 // Get current call state
 call_info_t get_current_call_info(void);
 bool is_call_active(void);
+bool is_call_blinking(void);
 
 #endif // CALL_MANAGER_H

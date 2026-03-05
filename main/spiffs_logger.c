@@ -1,4 +1,5 @@
 #include "spiffs_logger.h"
+#include "call_manager.h"
 
 static const char *LOG_PATH = "/spiffs/uid_log.txt";
 
@@ -55,6 +56,8 @@ esp_err_t spiffs_logger_send_all(void)
             fclose(f);
             return res;
         }
+        /* Give server time before next request */
+        vTaskDelay(pdMS_TO_TICKS(800));
     }
     fclose(f);
 
@@ -126,9 +129,16 @@ void maintenance_task(void *pvParameters)
 
         // --- SPIFFS Log Sync ---
         ESP_LOGI(TAG, "WiFi connected; attempting to sync stored logs");
-        led_set_color_indefinite(LED_WHITE);
+        // Only show sync status if no active call is blinking
+        if (!is_call_blinking())
+        {
+            led_set_color_indefinite(LED_WHITE);
+        }
         spiffs_logger_send_all();
-
+        // if (!is_call_blinking())
+        // {
+        //     led_set_color_indefinite(LED_OFF);
+        // }
         TickType_t now = xTaskGetTickCount();
 
         // --- Time Sync (every 1 hour) ---
