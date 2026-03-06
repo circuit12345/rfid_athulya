@@ -38,6 +38,9 @@ void app_main(void)
     /* Initialize call manager (buttons, MQTT for calls) */
     call_manager_init();
 
+    /* Initialize RF 433MHz receiver (bathroom module remote) */
+    custom_rf_init();
+
     rtc_hw084_init();
     //rtc_set_time_from_ntp();
 
@@ -68,6 +71,7 @@ void app_main(void)
     xTaskCreate(maintenance_task, "spiffs_sync_task", 6144, NULL, 5, NULL);
     xTaskCreate(wifi_mode_switch_task, "wifi_switch_task", 4096, NULL, 5, NULL);
     xTaskCreate(call_manager_task, "call_manager_task", 4096, NULL, 5, NULL);
+    xTaskCreate(rf_task, "rf_task", 4096, NULL, 5, NULL);  // RF 433MHz receiver task
     //xTaskCreate(time_sync_task, "time_sync_task", 4096, NULL, 5, NULL);
     // sntp_init_once();
     //rtc_set_time_from_ntp();

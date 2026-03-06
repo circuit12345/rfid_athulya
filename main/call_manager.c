@@ -5,7 +5,8 @@ static call_info_t g_current_call = {
     .type = CALL_TYPE_NONE,
     .state = CALL_STATE_IDLE,
     .start_time_ms = 0,
-    .is_attended = false
+    .is_attended = false,
+    .device_type = DEVICE_TYPE_BUTTON
 };
 
 static SemaphoreHandle_t call_mutex = NULL;
@@ -19,7 +20,7 @@ static TimerHandle_t escalation_timer = NULL;
 static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data);
 static void escalation_timer_callback(TimerHandle_t xTimer);
 static esp_err_t init_mqtt_client(void);
-static void send_call_to_mqtt(call_type_t call_type, const char *uid, bool is_attended);
+static void send_call_to_mqtt(call_type_t call_type, device_type_t device_type, const char *uid, bool is_attended);
 
 /**
  * Initialize MQTT client for local server communication
@@ -119,7 +120,7 @@ static void escalation_timer_callback(TimerHandle_t xTimer)
             ESP_LOGI(TAG, "Call escalated to EMERGENCY after 2 minutes");
             g_current_call.type = CALL_TYPE_EMERGENCY;
             g_current_call.state = CALL_STATE_ESCALATED;
-            send_call_to_mqtt(CALL_TYPE_EMERGENCY, "", false);
+            send_call_to_mqtt(CALL_TYPE_EMERGENCY, g_current_call.device_type, "", false);
             led_set_color_call_manager(LED_RED);  // Static LED - red until canceled or attended
         }
         xSemaphoreGive(call_mutex);
@@ -129,7 +130,7 @@ static void escalation_timer_callback(TimerHandle_t xTimer)
 /**
  * Send call information to local MQTT server
  */
-static void send_call_to_mqtt(call_type_t call_type, const char *uid, bool is_attended)
+static void send_call_to_mqtt(call_type_t call_type, device_type_t device_type, const char *uid, bool is_attended)
 {
     cJSON *root = cJSON_CreateObject();
     
@@ -145,6 +146,10 @@ static void send_call_to_mqtt(call_type_t call_type, const char *uid, bool is_at
     else if (call_type == CALL_TYPE_CANCELLED) call_type_str = "CANCELLED";
     
     cJSON_AddStringToObject(root, "callType", call_type_str);
+    
+    // Add device type
+    const char *device_type_str = (device_type == DEVICE_TYPE_REMOTE) ? "bathroom module" : "bed module";
+    cJSON_AddStringToObject(root, "device_type", device_type_str);
     
     // If RFID attended, add UID and other details
     if (is_attended && uid && strlen(uid) > 0) {
@@ -193,6 +198,7 @@ void call_button_pressed(void)
             g_current_call.state = CALL_STATE_ACTIVE;
             g_current_call.start_time_ms = esp_timer_get_time() / 1000;
             g_current_call.is_attended = false;
+            g_current_call.device_type = DEVICE_TYPE_BUTTON;  // Physical bed module button
             
             // Start escalation timer
             if (escalation_timer == NULL) {
@@ -203,7 +209,7 @@ void call_button_pressed(void)
                 xTimerStart(escalation_timer, pdMS_TO_TICKS(100));
             }
             
-            send_call_to_mqtt(CALL_TYPE_CALL, "", false);
+            send_call_to_mqtt(CALL_TYPE_CALL, DEVICE_TYPE_BUTTON, "", false);
             led_set_color_call_manager(LED_YELLOW);  // Static LED - overrides other tasks until call ends
         } else {
             ESP_LOGW(TAG, "[BUTTON] Call already active - ignoring new call");
@@ -225,7 +231,7 @@ void cancel_button_pressed(void)
             ESP_LOGI(TAG, "[BUTTON] CANCEL button pressed - canceling call");
             
             // Send MQTT notification that call was cancelled
-            send_call_to_mqtt(CALL_TYPE_CANCELLED, "", false);
+            send_call_to_mqtt(CALL_TYPE_CANCELLED, g_current_call.device_type, "", false);
             
             g_current_call.type = CALL_TYPE_NONE;
             g_current_call.state = CALL_STATE_IDLE;
@@ -260,6 +266,7 @@ void bluecode_button_pressed(void)
             g_current_call.state = CALL_STATE_ACTIVE;
             g_current_call.start_time_ms = esp_timer_get_time() / 1000;
             g_current_call.is_attended = false;
+            g_current_call.device_type = DEVICE_TYPE_BUTTON;  // Physical bed module button
             
             // Start escalation timer for BLUECODE as well
             if (escalation_timer == NULL) {
@@ -270,7 +277,7 @@ void bluecode_button_pressed(void)
                 xTimerStart(escalation_timer, pdMS_TO_TICKS(100));
             }
             
-            send_call_to_mqtt(CALL_TYPE_BLUECODE, "", false);
+            send_call_to_mqtt(CALL_TYPE_BLUECODE, DEVICE_TYPE_BUTTON, "", false);
             led_set_color_call_manager(LED_BLUE);  // Static LED - blue until canceled or attended
         } else {
             ESP_LOGW(TAG, "[BUTTON] Call already active - ignoring BLUECODE");
@@ -292,7 +299,7 @@ void rfid_response_to_call(const char *uid, const char *timestamp)
             g_current_call.is_attended = true;
             
             // Send attended response to MQTT
-            send_call_to_mqtt(g_current_call.type, uid, true);
+            send_call_to_mqtt(g_current_call.type, g_current_call.device_type, uid, true);
             
             // Stop escalation timer
             if (escalation_timer != NULL) {
@@ -452,5 +459,108 @@ void call_manager_task(void *arg)
         }
         
         vTaskDelay(pdMS_TO_TICKS(100)); // Poll every 100ms (debounce friendly)
+    }
+}
+
+/**
+ * RF CALL button pressed (433MHz remote) - raises a call if no call is currently active
+ */
+void rf_call_button_pressed(void)
+{
+    ESP_LOGI(TAG, "[RF REMOTE] CALL button action triggered");
+    if (xSemaphoreTake(call_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        if (g_current_call.state == CALL_STATE_IDLE) {
+            ESP_LOGI(TAG, "[RF REMOTE] CALL button pressed - raising call");
+            g_current_call.type = CALL_TYPE_CALL;
+            g_current_call.state = CALL_STATE_ACTIVE;
+            g_current_call.start_time_ms = esp_timer_get_time() / 1000;
+            g_current_call.is_attended = false;
+            g_current_call.device_type = DEVICE_TYPE_REMOTE;  // RF 433MHz bathroom module remote
+            
+            // Start escalation timer
+            if (escalation_timer == NULL) {
+                escalation_timer = xTimerCreate("escalation_timer", pdMS_TO_TICKS(CALL_TIMEOUT_MS), 
+                                               pdFALSE, NULL, escalation_timer_callback);
+            }
+            if (escalation_timer != NULL) {
+                xTimerStart(escalation_timer, pdMS_TO_TICKS(100));
+            }
+            
+            send_call_to_mqtt(CALL_TYPE_CALL, DEVICE_TYPE_REMOTE, "", false);
+            led_set_color_call_manager(LED_YELLOW);  // Static LED - overrides other tasks until call ends
+        } else {
+            ESP_LOGW(TAG, "[RF REMOTE] Call already active - ignoring new call");
+        }
+        xSemaphoreGive(call_mutex);
+    } else {
+        ESP_LOGE(TAG, "[RF REMOTE] Failed to acquire mutex for CALL button");
+    }
+}
+
+/**
+ * RF CANCEL button pressed (433MHz remote) - cancels active call
+ */
+void rf_cancel_button_pressed(void)
+{
+    ESP_LOGI(TAG, "[RF REMOTE] CANCEL button action triggered");
+    if (xSemaphoreTake(call_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        if (g_current_call.state != CALL_STATE_IDLE) {
+            ESP_LOGI(TAG, "[RF REMOTE] CANCEL button pressed - canceling call");
+            
+            // Send MQTT notification that call was cancelled
+            send_call_to_mqtt(CALL_TYPE_CANCELLED, g_current_call.device_type, "", false);
+            
+            g_current_call.type = CALL_TYPE_NONE;
+            g_current_call.state = CALL_STATE_IDLE;
+            g_current_call.is_attended = false;
+            
+            // Stop escalation timer
+            if (escalation_timer != NULL) {
+                xTimerStop(escalation_timer, pdMS_TO_TICKS(100));
+            }
+            
+            // Release LED control when call is canceled
+            led_release_call_manager();
+        } else {
+            ESP_LOGW(TAG, "[RF REMOTE] No active call to cancel");
+        }
+        xSemaphoreGive(call_mutex);
+    } else {
+        ESP_LOGE(TAG, "[RF REMOTE] Failed to acquire mutex for CANCEL button");
+    }
+}
+
+/**
+ * RF BLUECODE button pressed (433MHz remote) - raises a BLUECODE alert
+ */
+void rf_bluecode_button_pressed(void)
+{
+    ESP_LOGI(TAG, "[RF REMOTE] BLUECODE button action triggered");
+    if (xSemaphoreTake(call_mutex, pdMS_TO_TICKS(100)) == pdTRUE) {
+        if (g_current_call.state == CALL_STATE_IDLE) {
+            ESP_LOGI(TAG, "[RF REMOTE] BLUECODE button pressed - raising BLUECODE alert");
+            g_current_call.type = CALL_TYPE_BLUECODE;
+            g_current_call.state = CALL_STATE_ACTIVE;
+            g_current_call.start_time_ms = esp_timer_get_time() / 1000;
+            g_current_call.is_attended = false;
+            g_current_call.device_type = DEVICE_TYPE_REMOTE;  // RF 433MHz bathroom module remote
+            
+            // Start escalation timer for BLUECODE as well
+            if (escalation_timer == NULL) {
+                escalation_timer = xTimerCreate("escalation_timer", pdMS_TO_TICKS(CALL_TIMEOUT_MS), 
+                                               pdFALSE, NULL, escalation_timer_callback);
+            }
+            if (escalation_timer != NULL) {
+                xTimerStart(escalation_timer, pdMS_TO_TICKS(100));
+            }
+            
+            send_call_to_mqtt(CALL_TYPE_BLUECODE, DEVICE_TYPE_REMOTE, "", false);
+            led_set_color_call_manager(LED_BLUE);  // Static LED - blue until canceled or attended
+        } else {
+            ESP_LOGW(TAG, "[RF REMOTE] Call already active - ignoring BLUECODE");
+        }
+        xSemaphoreGive(call_mutex);
+    } else {
+        ESP_LOGE(TAG, "[RF REMOTE] Failed to acquire mutex for BLUECODE button");
     }
 }

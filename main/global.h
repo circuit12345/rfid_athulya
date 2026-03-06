@@ -43,6 +43,7 @@
 #include "led.h"
 #include "mqtt_client.h"
 #include "call_manager.h"
+#include "rf.h"
 
 #define RESPONSE_BUFFER_SIZE 14000 
 #define WEB_SERVER_URL "https://tamsen.in/rfid/entry.php"

@@ -19,12 +19,19 @@ typedef enum {
     CALL_STATE_ESCALATED = 2
 } call_state_t;
 
+// Device type for call source identification
+typedef enum {
+    DEVICE_TYPE_BUTTON = 0,    // Physical bed module button
+    DEVICE_TYPE_REMOTE = 1     // RF 433MHz bathroom module remote
+} device_type_t;
+
 // Call information structure
 typedef struct {
     call_type_t type;
     call_state_t state;
     uint64_t start_time_ms;
     bool is_attended;
+    device_type_t device_type;  // Track whether call came from button or remote
 } call_info_t;
 
 // GPIO Pins for buttojomlkmk,onjolmklmom
@@ -38,6 +45,9 @@ void call_manager_init(void);
 void call_button_pressed(void);
 void cancel_button_pressed(void);
 void bluecode_button_pressed(void);
+void rf_call_button_pressed(void);           // RF remote call button
+void rf_cancel_button_pressed(void);         // RF remote cancel button
+void rf_bluecode_button_pressed(void);       // RF remote bluecode button
 void rfid_response_to_call(const char *uid, const char *timestamp);
 void call_manager_task(void *arg);
 
