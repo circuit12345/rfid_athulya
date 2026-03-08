@@ -120,8 +120,13 @@ void rf_task(void *arg)
  */
 void custom_rf_init(void)
 {
-    ESP_LOGI(RF_TAG, "Initializing RF 433MHz receiver on GPIO %d", RF_RECEIVER_GPIO);
-    
+    // ESP_LOGI(RF_TAG, "Initializing RF 433MHz receiver on GPIO %d", RF_RECEIVER_GPIO);
+    //     gpio_config_t button_conf = {
+    //     .intr_type = GPIO_INTR_DISABLE,    // Disable interrupts to avoid conflicts
+    //     .mode = GPIO_MODE_INPUT,
+    //     .pin_bit_mask = (1ULL << CALL_BUTTON_GPIO) | (1ULL << CANCEL_BUTTON_GPIO) | (1ULL << BLUECODE_BUTTON_GPIO),
+    //     .pull_up_en = GPIO_PULLUP_ENABLE,
+    // };
     // Configure GPIO for RF receiver
     gpio_config_t io_conf = {
         .intr_type = GPIO_INTR_ANYEDGE,     // Trigger on both rising and falling edges

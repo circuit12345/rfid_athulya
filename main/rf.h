@@ -12,7 +12,7 @@ typedef enum {
 } rf_button_t;
 
 // GPIO Pin for RF 433MHz receiver
-#define RF_RECEIVER_GPIO    GPIO_NUM_5    // RF 433MHz receiver input pin
+#define RF_RECEIVER_GPIO    GPIO_NUM_17    // RF 433MHz receiver input pin
 
 // RF receiver configuration
 #define RF_RECEIVER_TIMEOUT_MS 100        // Max time to wait between bits

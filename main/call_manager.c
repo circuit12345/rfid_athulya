@@ -47,7 +47,7 @@ static esp_err_t init_mqtt_client(void)
     ESP_LOGI(TAG, "WiFi connected, initializing MQTT...");
 
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.1.7:1883",  // Your MQTT server
+        .broker.address.uri = "mqtt://192.168.1.5:1883",  // Your MQTT server
         // .keepalive = 60,
         // .buffer_size = 1024,
         // .task_stack = 6144,
@@ -307,8 +307,8 @@ void rfid_response_to_call(const char *uid, const char *timestamp)
             }
             
             // Reset call state
-            g_current_call.type = CALL_TYPE_NONE;
-            g_current_call.state = CALL_STATE_IDLE;
+            // g_current_call.type = CALL_TYPE_NONE;
+            // g_current_call.state = CALL_STATE_IDLE;
             
             // Release LED control and set brief green flash for attended call
             led_set_color_call_manager(LED_GREEN);  // Indicate attended with green
@@ -320,6 +320,18 @@ void rfid_response_to_call(const char *uid, const char *timestamp)
     if (g_current_call.is_attended) {
         vTaskDelay(pdMS_TO_TICKS(1500));
         led_release_call_manager();
+        if(g_current_call.type == CALL_TYPE_CALL )
+        {
+          led_set_color_call_manager(LED_YELLOW);  
+        }
+        if(g_current_call.type == CALL_TYPE_EMERGENCY )
+        {
+          led_set_color_call_manager(LED_RED);    
+        }
+        if(g_current_call.type == CALL_TYPE_BLUECODE )
+        {
+          led_set_color_call_manager(LED_BLUE);    
+        }
     }
 }
 
@@ -419,19 +431,19 @@ void call_manager_task(void *arg)
         if (prev_call_level == 1 && call_level == 0) {
             ESP_LOGI(TAG, "[POLL] CALL button PRESSED (falling edge detected)");
             call_button_pressed();
-            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+            vTaskDelay(pdMS_TO_TICKS(200)); // Debounce
         }
         
         if (prev_cancel_level == 1 && cancel_level == 0) {
             ESP_LOGI(TAG, "[POLL] CANCEL button PRESSED (falling edge detected)");
             cancel_button_pressed();
-            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+            vTaskDelay(pdMS_TO_TICKS(200)); // Debounce
         }
         
         if (prev_bluecode_level == 1 && bluecode_level == 0) {
             ESP_LOGI(TAG, "[POLL] BLUECODE button PRESSED (falling edge detected)");
             bluecode_button_pressed();
-            vTaskDelay(pdMS_TO_TICKS(50)); // Debounce
+            vTaskDelay(pdMS_TO_TICKS(200)); // Debounce
         }
         
         // Also detect RISING edge (0 -> 1 = button released)
@@ -454,8 +466,8 @@ void call_manager_task(void *arg)
         call_info_t call = get_current_call_info();
         if (call.state != CALL_STATE_IDLE) {
             uint64_t elapsed_ms = (esp_timer_get_time() / 1000) - call.start_time_ms;
-            // ESP_LOGI(TAG, "[CALL STATE] Type: %d, State: %d, Attended: %d, Elapsed: %lld ms", 
-            //          call.type, call.state, call.is_attended, elapsed_ms);
+            ESP_LOGI(TAG, "[CALL STATE] Type: %d, State: %d, Attended: %d, Elapsed: %lld ms", 
+                     call.type, call.state, call.is_attended, elapsed_ms);
         }
         
         vTaskDelay(pdMS_TO_TICKS(100)); // Poll every 100ms (debounce friendly)

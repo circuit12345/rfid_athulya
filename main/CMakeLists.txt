@@ -2,6 +2,7 @@
 idf_component_register(
     SRCS "rf.c" "main.c" "global.c" "gpio.c" "nvs_handle.c" "rfid.c" "webserver.c" "wifi.c" "http_client.c" "spiffs_logger.c" "rtc.c" "ota.c" "led.c" "call_manager.c"
     INCLUDE_DIRS "."
+    EMBED_TXTFILES server.crt
     REQUIRES
         esp_system
         esp_wifi
